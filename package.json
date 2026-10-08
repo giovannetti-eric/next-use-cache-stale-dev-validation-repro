@@ -6,7 +6,8 @@
     "dev": "next dev --port 3200",
     "build": "next build",
     "start": "next start --port 3200",
-    "repro": "node scripts/repro.mjs"
+    "repro": "node scripts/repro.mjs",
+    "repro:prod": "node scripts/prod.mjs"
   },
   "dependencies": {
     "next": "16.4.0",

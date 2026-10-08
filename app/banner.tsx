@@ -1,7 +1,7 @@
 import { getBanner } from "./data";
 
 export async function Banner() {
-  const { servedAt } = await getBanner();
+  const { version, servedAt } = await getBanner();
 
-  return <p>Banner data fetched at {servedAt}</p>;
+  return <p>{`Banner data version ${version}, fetched at ${servedAt}`}</p>;
 }

@@ -21,6 +21,7 @@ const cache = new Map();
 const pendingSets = new Map();
 
 const ageCheck = process.env.HANDLER_AGE_CHECK !== "false";
+const log = process.env.HANDLER_LOG ? (/** @type {string} */ message) => console.info(`[cache-handler] ${message}`) : undefined;
 
 /** @param {Uint8Array} bytes */
 function streamFromBytes(bytes) {
@@ -42,7 +43,12 @@ module.exports = {
 
     const entry = cache.get(cacheKey);
     if (!entry) {
+      log?.(`get miss ${cacheKey.slice(0, 60)}`);
       return undefined;
+    }
+    if (log) {
+      const age = Date.now() - entry.timestamp;
+      log(`get ${age > entry.revalidate * 1000 ? "stale" : "fresh"} hit, age ${Math.round(age / 1000)} s, ${cacheKey.slice(0, 60)}`);
     }
 
     if (ageCheck && Date.now() > entry.timestamp + entry.expire * 1000) {
@@ -67,6 +73,7 @@ module.exports = {
       const value = new Uint8Array(await new Response(entry.value).arrayBuffer());
       const stored = { ...entry, value };
       cache.set(cacheKey, stored);
+      log?.(`set ${cacheKey.slice(0, 60)}`);
 
       // Eviction: drop the entry once it is past `expire`, unless a newer one replaced it
       setTimeout(() => {
