@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: process.env.PARTIAL_PREFETCHING !== "false",
   cacheLife: {
-    // Prerenderable: revalidate > 0, expire >= 5 min, stale inherits the default 5 min.
+    // Prerenderable: revalidate > 0, expire >= 5 min. stale inherits the default 5 min.
     "short-revalidate": { revalidate: 10, expire: 3600 },
   },
   ...(useCustomHandler ? { cacheHandlers: { default: require.resolve("./cache-handler.js") } } : {}),

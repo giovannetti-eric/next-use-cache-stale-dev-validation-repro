@@ -9,7 +9,8 @@ Two renders read it, with two visible effects:
 - **`next dev`: a false "uncached data" error.** Dev validation re-renders from the RDC, waits on the regeneration's `fetch`, and reports the component as uncached data, on a route `next build` prerenders as fully static.
   It reproduces with the built-in `"use cache"` handler.
 - **Production, with `partialPrefetching`: a runtime prefetch that does not match the response.** The runtime prefetch embedded in the response is rendered from the same RDC.
-  On a stale hit it is cut off without the cached content (16.3.8 and later), or waits for the regeneration and carries the new value next to the served one (16.3.5), while the HTML and the main RSC payload carry the served value.
+  On a stale hit it is either cut off without the cached content, or waits for the regeneration and carries the new value next to the served one, while the HTML and the main RSC payload carry the served value.
+  Which of the two happens is a race: 16.3.5 mostly waits, 16.3.8 and later mostly cut it off.
   The built-in handler is not exposed in production, because it drops entries at `revalidate`; a custom handler that serves stale entries until `expire`, as the 16.4 `cacheHandlers` docs describe, is.
 
 Both reproduce on 16.3.5, 16.3.8, 16.4.0 and 16.5.0-canary.3.
@@ -20,7 +21,7 @@ Error: Route "/other": Next.js encountered uncached data during prerendering.
 
 `fetch(...)` or `connection()` accessed outside of `<Suspense>` prevents the route from being prerendered, blocking the page load and leading to a slower user experience.
 ...
-    at Banner (app/banner.tsx:4:24)
+    at Banner (app/banner.tsx:4:33)
     at RootLayout (app/layout.tsx:8:9)
 ```
 
@@ -47,7 +48,8 @@ It installs each Next.js version in turn, then restores `package.json`, the lock
 Everything follows the Next.js 16.4 rules for Cache Components:
 
 - `next.config.ts`: `cacheComponents: true`, `partialPrefetching: true` (`PARTIAL_PREFETCHING=false` turns it off), and one `cacheLife` profile, `short-revalidate`: `revalidate: 10`, `expire: 3600`, `stale` inherited from `default` (5 minutes).
-  That profile is prerenderable: `revalidate` above 0, `expire` of at least 5 minutes, `stale` of at least 5 minutes.
+  That profile is prerenderable: `revalidate` above 0 and `expire` of at least 5 minutes.
+  Its 5-minute `stale` also keeps it in the App Shell.
 - The data server answers each request with a version number counted per source, after 500 ms.
 - `app/layout.tsx` (root layout) renders `<Banner />`, which awaits `getBanner()`: `"use cache"` + `cacheLife("short-revalidate")` around a `fetch`.
 - `app/page.tsx` is static. `app/other/page.tsx` awaits `getOther()`: `"use cache"` + `cacheLife("hours")` around a 50 ms `fetch`.
@@ -110,7 +112,9 @@ Greeting copies per response, the version they show, and the response time:
 | 16.4.0 | built-in | true | 3 (v1) 610 ms | 3 (v1) 22 ms | 3 (v2) 540 ms | 3 (v2) 12 ms | 2 (v3) 537 ms | 2 (v3) 14 ms |
 | 16.4.0 + candidate fix | custom | true | 3 (v1) 597 ms | 3 (v1) 23 ms | 3 (v1) 31 ms | 3 (v2) 30 ms | 2 (v2) 29 ms | 2 (v3) 19 ms |
 
-The 16.3.5 row repeated identically in 2 more runs: the stale RSC response waited about 530 ms and carried v2 in the payload and v3 in the runtime prefetch.
+The RSC 30 s (stale) column is a race between the runtime prefetch and the regeneration.
+Counting this run and later runs of `pnpm repro:prod custom`, the stale RSC response waited about 530 ms and carried v2 + v3 in 5 of 6 runs on 16.3.5 and 1 of 6 on 16.3.8.
+It carried 1 copy, with no wait, in every other run, including 7 of 7 on 16.4.0 and 2 of 2 on 16.5.0-canary.3.
 
 ### What the tables say
 
@@ -119,8 +123,9 @@ The 16.3.5 row repeated identically in 2 more runs: the stale RSC response waite
   The same first visit while the banner is fresh (`control`) is clean.
 - **In dev with the custom handler, every stale hit logs it,** with no other cache miss needed (see [the amplifier](#amplifier-the-custom-handlers-clock-read-forces-the-re-render)).
 - **In production, the runtime prefetch of a stale-hit response does not carry the served value.**
-  From 16.3.8 on, it is left out: the document carries 2 copies instead of 3, the RSC response 1 instead of 2, and the response is not slower.
-  On 16.3.5 the stale document is the same, but the stale RSC response waits for the regeneration (about 530 ms instead of about 20 ms) and carries two versions: the served v2 in the payload, the regenerated v3 in the runtime prefetch.
+  The stale document carries 2 copies instead of 3, and is not slower.
+  The stale RSC response either leaves it out too, 1 copy instead of 2, or waits for the regeneration (about 530 ms instead of about 20 ms) and carries two versions: the served v2 in the payload, the regenerated v3 in the runtime prefetch.
+  Both happen on 16.3.5 and 16.3.8: 16.3.5 mostly waits, 16.3.8 and later mostly leave it out.
 - **Without `partialPrefetching` there is no runtime prefetch, and production is unaffected.** The dev error does not depend on the flag.
 - **The built-in handler never serves a stale entry in production:** it regenerates in the foreground, so the stale request takes 500 ms more and carries the new version everywhere.
 - **It is a race with the background regeneration.** With a data source that answers at once, the dev `builtin` scenario stops reproducing and the `custom` one reproduces less often.
@@ -143,13 +148,13 @@ Line numbers are from the [v16.4.0 sources](https://github.com/vercel/next.js/tr
    The `"use cache"` call reads it with `let rdcResult = await rdcEntry`
    ([use-cache-wrapper.ts#L2515](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/use-cache/use-cache-wrapper.ts#L2515)).
    - **Dev validation.** After the response, validation reuses the main render unless it had a cache miss or a sync I/O interrupt ([app-render.tsx#L5100-L5103](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L5100-L5103)).
-     Otherwise it re-renders with warm caches. In the `builtin` scenario, `/other`'s own miss forces that re-render. Validation first waits for `cacheSignal.cacheReady()` ([app-render.tsx#L6219-L6222](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L6219-L6222)), but that wait does not cover the background regeneration.
+     Otherwise it re-renders with warm caches. In the `builtin` scenario, `/other`'s own miss forces that re-render. When the main render had a cache miss, validation first waits for `cacheSignal.cacheReady()` ([app-render.tsx#L6219-L6222](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L6219-L6222)), but that wait does not cover the background regeneration. After a sync I/O interrupt alone, as in the `custom` scenario, it does not wait at all.
      The read does not resolve in the static stage, and validation reports uncached data.
      Instrumenting the RDC read on the failing load measured a 493 ms wait for the 500 ms `fetch`; on every other load it resolves at once.
    - **Production runtime prefetch.** With `partialPrefetching`, a dynamic render gets a mutable RDC and, once `cacheSignal.cacheReady()` resolves, spawns a `prerender-runtime` render from it whose output is embedded in the response ([app-render.tsx#L1015-L1047](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L1015-L1047), [#L3927-L3956](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L3927-L3956), `spawnRuntimePrefetchWithFilledCaches` at [#L1134](https://github.com/vercel/next.js/blob/v16.4.0/packages/next/src/server/app-render/app-render.tsx#L1134)).
      On a stale hit that render reads the pending regeneration instead of the served entry.
-     From 16.3.8 on it finishes without it: the runtime prefetch stream in the response lacks the row holding the greeting, and its `w` field (`shellUsedSessionData`) flips from `true` to `false`.
-     On 16.3.5 the RSC response waits for the regeneration and embeds the new value next to the served one.
+     Either it finishes without it: the runtime prefetch stream in the response lacks the row holding the greeting.
+     Or it waits for the regeneration and embeds the new value next to the served one, which 16.3.5 does in most runs.
 
 The candidate fix keeps the background revalidation out of the request's RDC: it writes the regenerated entry to the cache handler only, and the RDC keeps the entry the request was served.
 It is one line in the 16.4.0 build, applied by `scripts/apply-candidate-fix.mjs`:

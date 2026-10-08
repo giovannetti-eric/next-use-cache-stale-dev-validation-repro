@@ -1,14 +1,14 @@
 // @ts-check
 // Custom "use cache" handler following the Next.js 16.4 cacheHandlers contract
 // (node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/cacheHandlers.md).
-// It is the docs' "Basic in-memory cache handler" example plus the two things the docs leave
-// to a real handler:
+// It is the docs' "Basic in-memory cache handler" example plus two things a real handler has:
 //
 // - Eviction ("Eviction is yours"): each entry is deleted once it is past `expire`.
-// - A serving policy: an entry past `expire` is reported as missing. Next.js applies the same
-//   check itself, and the docs call it a policy choice, so this only duplicates it. An entry
-//   past `revalidate` but within `expire` is returned, which the docs describe as serving it
-//   and regenerating it in the background.
+// - An `expire` check: an entry past `expire` is reported as missing. The docs say a handler
+//   does not need it, since Next.js compares `timestamp` with `expire` on every read, so this
+//   only duplicates it, the way TTL logic in a real store does. An entry past `revalidate` but
+//   within `expire` is returned, which the docs describe as serving it and regenerating it in
+//   the background.
 //
 // HANDLER_AGE_CHECK=false removes the `expire` check, so `get` never reads the clock.
 
