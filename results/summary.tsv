@@ -1,0 +1,19 @@
+default	{"label":"16.4.0_builtin","nextVersion":"16.4.0","scenario":"builtin","handler":"builtin","errors":1,"perLoad":[0,0,1,0]}
+default	{"label":"16.4.0_control","nextVersion":"16.4.0","scenario":"control","handler":"builtin","errors":0,"perLoad":[0,0,0]}
+default	{"label":"16.4.0_custom","nextVersion":"16.4.0","scenario":"custom","handler":"custom","errors":2,"perLoad":[0,0,1,0,0,1,0]}
+default	{"label":"16.3.8_builtin","nextVersion":"16.3.8","scenario":"builtin","handler":"builtin","errors":1,"perLoad":[0,0,1,0]}
+default	{"label":"16.3.8_control","nextVersion":"16.3.8","scenario":"control","handler":"builtin","errors":0,"perLoad":[0,0,0]}
+default	{"label":"16.3.8_custom","nextVersion":"16.3.8","scenario":"custom","handler":"custom","errors":2,"perLoad":[0,0,1,0,0,1,0]}
+default	{"label":"16.3.5_builtin","nextVersion":"16.3.5","scenario":"builtin","handler":"builtin","errors":1,"perLoad":[0,0,1,0]}
+default	{"label":"16.3.5_control","nextVersion":"16.3.5","scenario":"control","handler":"builtin","errors":0,"perLoad":[0,0,0]}
+default	{"label":"16.3.5_custom","nextVersion":"16.3.5","scenario":"custom","handler":"custom","errors":2,"perLoad":[0,0,1,0,0,1,0]}
+default	{"label":"16.5.0-canary.3_builtin","nextVersion":"16.5.0-canary.3","scenario":"builtin","handler":"builtin","errors":1,"perLoad":[0,0,1,0]}
+default	{"label":"16.5.0-canary.3_control","nextVersion":"16.5.0-canary.3","scenario":"control","handler":"builtin","errors":0,"perLoad":[0,0,0]}
+default	{"label":"16.5.0-canary.3_custom","nextVersion":"16.5.0-canary.3","scenario":"custom","handler":"custom","errors":2,"perLoad":[0,0,1,0,0,1,0]}
+DATA_DELAY_MS=0	{"label":"16.4.0_builtin","nextVersion":"16.4.0","scenario":"builtin","handler":"builtin","errors":0,"perLoad":[0,0,0,0]}
+DATA_DELAY_MS=0	{"label":"16.4.0_custom","nextVersion":"16.4.0","scenario":"custom","handler":"custom","errors":1,"perLoad":[0,0,1,0,0,0,0]}
+PARTIAL_PREFETCHING=false	{"label":"16.4.0_builtin","nextVersion":"16.4.0","scenario":"builtin","handler":"builtin","errors":1,"perLoad":[0,0,1,0]}
+PARTIAL_PREFETCHING=false	{"label":"16.4.0_custom","nextVersion":"16.4.0","scenario":"custom","handler":"custom","errors":2,"perLoad":[0,0,1,0,0,1,0]}
+HANDLER_AGE_CHECK=false	{"label":"16.4.0_custom","nextVersion":"16.4.0","scenario":"custom","handler":"custom","errors":0,"perLoad":[0,0,0,0,0,0,0]}
+candidate fix	{"label":"16.4.0_builtin","nextVersion":"16.4.0","scenario":"builtin","handler":"builtin","errors":0,"perLoad":[0,0,0,0]}
+candidate fix	{"label":"16.4.0_custom","nextVersion":"16.4.0","scenario":"custom","handler":"custom","errors":0,"perLoad":[0,0,0,0,0,0,0]}
